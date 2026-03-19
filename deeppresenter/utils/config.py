@@ -317,7 +317,7 @@ class DeepPresenterConfig(BaseModel):
     )
     file_path: str = Field(description="Configuration file path")
     mcp_config_file: str = Field(
-        description="MCP configuration file", default=PACKAGE_DIR / "mcp.json"
+        description="MCP configuration file", default=str(PACKAGE_DIR / "mcp.json")
     )
     context_folding: bool = Field(
         default=True, description="Enable context management and auto summarization"

@@ -70,10 +70,12 @@
 
 > [!IMPORTANT]
 > Windows is not supported. If you are on Windows, please use WSL.
+>
+> We strongly recommend starting with the CLI and minimum task to confirm dependencies and environment is configured correctly.
 
 ### Configuration
 
-If you use the CLI, `uvx pptagent onboard` can help create and update these configurations interactively. If you use Docker Compose or build from source, you should prepare them manually:
+If you use the CLI, `pptagent onboard` can help create and update these configurations interactively. If you use Docker Compose or build from source, you should prepare them manually:
 
 ```bash
 cp deeppresenter/config.yaml.example deeppresenter/config.yaml
@@ -105,15 +107,16 @@ Use this mode if you want the fastest local setup or want to plug DeepPresenter 
 ```bash
 # Install uv
 curl -LsSf https://astral.sh/uv/install.sh | sh
+uv tool install pptagent
 
 # First-time interactive setup
-uvx pptagent onboard
+pptagent onboard
 
 # Generate a presentation
-uvx pptagent generate "Single Page with Title: Hello World" -o hello.pptx
+pptagent generate "Single Page with Title: Hello World" -o hello.pptx
 
 # Generate with attachments
-uvx pptagent generate "Q4 Report" \
+pptagent generate "Q4 Report" \
   -f data.xlsx \
   -f charts.pdf \
   -p "10-12" \
@@ -138,8 +141,8 @@ playwright install-deps
 playwright install chromium
 npm install --prefix deeppresenter/html2pptx
 
-docker pull crpi-0dz9m86qyvrdt6ju.cn-beijing.personal.cr.aliyuncs.com/pptagent/deeppresenter-sandbox:v0.1.0
-docker tag crpi-0dz9m86qyvrdt6ju.cn-beijing.personal.cr.aliyuncs.com/pptagent/deeppresenter-sandbox:v0.1.0 deeppresenter-sandbox:0.1.0
+docker pull forceless/deeppresenter-sandbox:0.1.0
+docker tag forceless/deeppresenter-sandbox:0.1.0 deeppresenter-sandbox:0.1.0
 
 # or build from dockerfile
 docker build -t deeppresenter-sandbox:0.1.0 -f deeppresenter/docker/SandBox.Dockerfile deeppresenter/docker
@@ -157,12 +160,8 @@ Use this mode for a stable server environment with explicit dependencies.
 
 ```bash
 # Pull the public images to avoid build from source
-docker pull crpi-0dz9m86qyvrdt6ju.cn-beijing.personal.cr.aliyuncs.com/pptagent/deeppresenter-host:v0.1.0
-docker pull crpi-0dz9m86qyvrdt6ju.cn-beijing.personal.cr.aliyuncs.com/pptagent/deeppresenter-sandbox:v0.1.0
-
-# Tag them to the local names expected by docker-compose.yml
-docker tag crpi-0dz9m86qyvrdt6ju.cn-beijing.personal.cr.aliyuncs.com/pptagent/deeppresenter-host:v0.1.0 deeppresenter-host:0.1.0
-docker tag crpi-0dz9m86qyvrdt6ju.cn-beijing.personal.cr.aliyuncs.com/pptagent/deeppresenter-sandbox:v0.1.0 deeppresenter-sandbox:0.1.0
+docker pull forceless/deeppresenter-sandbox:0.1.0
+docker tag forceless/deeppresenter-sandbox:0.1.0 deeppresenter-sandbox:0.1.0
 
 # Or build from source
 docker build -t deeppresenter-sandbox:0.1.0 -f deeppresenter/docker/SandBox.Dockerfile deeppresenter/docker
