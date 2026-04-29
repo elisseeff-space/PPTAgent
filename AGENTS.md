@@ -105,18 +105,34 @@ Do not assume the root `README.md` is fully current. It still references paths l
 - Browser and Docker dependencies are part of the normal runtime, not optional dev extras for some codepaths.
 - Some tests are integration-heavy and may fail if Playwright, Docker images, or model credentials are absent.
 
-## File Map
+## Developer Commands
 
-- `pyproject.toml`: package metadata, dependencies, pytest markers, console scripts.
-- `README.md`: user-facing overview, partially current.
-- `pptagent/README.md`: older project framing focused on the original PPTAgent paper/system.
-- `pptagent/DOC.md`: legacy documentation with useful conceptual background, but not always current for paths and startup flow.
-- `deeppresenter/config.yaml.example`: model/runtime configuration schema.
-- `deeppresenter/mcp.json.example`: MCP tool definitions and expected environment variables.
+- Install dev environment: `uv sync`
+- Run pre-commit: `uv run pre-commit install`
+- Lint/format: `uv run ruff check --fix && uv run ruff format`
+- Run tests: `uv run pytest` (tests live in `pptagent/test/`)
+- Build package: `uv build`
 
-## Preferred Change Strategy
+## Test Markers
 
-1. Confirm which stack owns the behavior.
-2. Edit the smallest relevant surface.
-3. Run the narrowest meaningful test subset.
-4. Call out any dependency you could not validate locally.
+- `@pytest.mark.llm`: requires OPENAI_API_KEY
+- `@pytest.mark.parse`: requires minerU API
+- `@pytest.mark.asyncio`: async test
+
+## Key Entrypoints
+
+- CLI: `pptagent` → `deeppresenter.cli:main`
+- MCP: `pptagent-mcp` → `pptagent.mcp_server:main`
+- AgentLoop: `deeppresenter.main.py`
+
+## Runtime Dependencies
+
+- Playwright browsers (install via `playwright install --with-deps`)
+- Docker (for sandbox image `deeppresenter-sandbox`)
+- Node 18+ (for HTML→PPTX conversion)
+
+## Verified Configuration
+
+- `pyproject.toml`: package metadata, deps, pytest markers, ruff config
+- `deeppresenter/config.yaml.example`: runtime config schema
+- `pre-commit-config.yaml`: ruff, pyupgrade, validate-pyproject
