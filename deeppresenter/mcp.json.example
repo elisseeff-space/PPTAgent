@@ -52,7 +52,9 @@
         ],
         "env": {
             "TAVILY_API_KEY": "your_tavily_api_key_here",
-            "SERPAPI_KEY": "your_seriapi_api_key_here"
+            "YANDEX_API_KEY": "your_yandex_api_key_here",
+            "YANDEX_FOLDER_ID": "your_yandex_folder_id_here",
+            "YANDEX_SEARCH_TYPE": "SEARCH_TYPE_RU"
         },
         "network": true
     },

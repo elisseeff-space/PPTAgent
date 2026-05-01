@@ -75,6 +75,7 @@ dependencies = [
     "PyYAML",
     "pytest",
     "pytest-asyncio",
+    "pytest-dotenv",
     "pytest-xdist",
     "rich>=13.0.0",
     "semanticscholar>=0.11.0",
@@ -137,6 +138,7 @@ exclude = ["*.test", "*.test.*", "test.*", "test", "sarl*", "data*", "harness*"]
 [tool.pytest.ini_options]
 asyncio_mode = "auto"
 asyncio_default_fixture_loop_scope = "function"
+env_files = [".env"]
 markers = [
     "llm: mark test as using LLM (requires OPENAI_API_KEY)",
     "parse: mark test as using minerU API",

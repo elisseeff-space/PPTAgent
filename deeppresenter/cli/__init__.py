@@ -3,9 +3,12 @@
 
 import warnings
 
+from dotenv import load_dotenv
 import typer
 
 from .commands import clean, config, generate, onboard, serve
+
+load_dotenv()
 
 warnings.filterwarnings("ignore", category=DeprecationWarning)
 warnings.filterwarnings("ignore", message=".*urllib3.*")

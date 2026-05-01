@@ -17,6 +17,8 @@ node_modules
 */mcp.json
 */.tools.json
 **/test_output
+.env
+.env.local
 
 # Copy from vuejs
 

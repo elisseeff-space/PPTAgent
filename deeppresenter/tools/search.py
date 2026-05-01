@@ -26,9 +26,12 @@ mcp = FastMCP(name="Search", lifespan=playwright_lifespan)
 
 FAKE_UA = UserAgent()
 
-# Google (SerpAPI)
-GOOGLE_KEYS = [i.strip() for i in os.getenv("SERPAPI_KEY", "").split(",") if i.strip()]
-SERPAPI_URL = "https://serpapi.com/search"
+# Yandex Search API
+YANDEX_API_KEY = os.getenv("YANDEX_API_KEY", "")
+YANDEX_FOLDER_ID = os.getenv("YANDEX_FOLDER_ID", "")
+YANDEX_SEARCH_URL = "https://searchapi.api.cloud.yandex.net/v2/web/search"
+YANDEX_IMAGES_URL = "https://searchapi.api.cloud.yandex.net/v2/image/search"
+YANDEX_SEARCH_TYPE = os.getenv("YANDEX_SEARCH_TYPE", "SEARCH_TYPE_RU")
 
 # Tavily
 TAVILY_KEYS = [
@@ -38,23 +41,89 @@ TAVILY_KEYS = [
 ]
 TAVILY_API_URL = "https://api.tavily.com/search"
 
-debug(f"{len(GOOGLE_KEYS)} SerpAPI keys loaded")
+debug(f"{len(YANDEX_API_KEY)} Yandex API key loaded")
+debug(
+    f"Yandex folder_id: {YANDEX_FOLDER_ID[:16]}..."
+    if YANDEX_FOLDER_ID
+    else "No Yandex folder_id"
+)
 debug(f"{len(TAVILY_KEYS)} TAVILY keys loaded")
 
 
-# ── Google helpers ─────────────────────────────────────────────────────────────
+# ── Yandex helpers ─────────────────────────────────────────────────────────────
 
 
-async def _serpapi_request(params: dict[str, Any]) -> dict[str, Any]:
-    params = {**params, "api_key": GOOGLE_KEYS[0]}
+async def _yandex_search_request(query: str, limit: int = 5) -> dict[str, Any]:
+    import base64
+    headers = {
+        "Authorization": f"Api-Key {YANDEX_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "query": {"searchType": YANDEX_SEARCH_TYPE, "queryText": query},
+        "folderId": YANDEX_FOLDER_ID,
+        "pageSize": limit,
+    }
     async with aiohttp.ClientSession() as session:
-        async with session.get(SERPAPI_URL, params=params) as response:
+        async with session.post(
+            YANDEX_SEARCH_URL, headers=headers, json=payload
+        ) as response:
             if response.status == 200:
-                return await response.json()
+                result = await response.json()
+                xml_data = base64.b64decode(result.get("rawData", ""))
+                from xml.etree import ElementTree as ET
+                root = ET.fromstring(xml_data)
+                ns = {"y": "http://www.yandex.ru/searchapi"}
+                results = []
+                for doc in root.findall(".//y:doc", ns)[:limit]:
+                    results.append({
+                        "title": doc.find("y:title", ns).text if doc.find("y:title", ns) is not None else "",
+                        "url": doc.find("y:url", ns).text if doc.find("y:url", ns) is not None else "",
+                        "displayed_link": doc.find("y:displayed-url", ns).text if doc.find("y:displayed-url", ns) is not None else "",
+                        "content": doc.find("y:snippet", ns).text if doc.find("y:snippet", ns) is not None else "",
+                    })
+                return {"results": results}
             body = await response.text()
-            warning(f"SERPAPI Error [{response.status}] body={body}")
+            warning(f"Yandex Search Error [{response.status}] body={body}")
             response.raise_for_status()
-    raise RuntimeError("SerpAPI request failed")
+    raise RuntimeError("Yandex Search request failed")
+
+
+async def _yandex_images_request(query: str, limit: int = 4) -> dict[str, Any]:
+    import base64
+    headers = {
+        "Authorization": f"Api-Key {YANDEX_API_KEY}",
+        "Content-Type": "application/json",
+    }
+    payload = {
+        "query": {"searchType": YANDEX_SEARCH_TYPE, "queryText": query},
+        "folderId": YANDEX_FOLDER_ID,
+        "docsOnPage": limit,
+    }
+    async with aiohttp.ClientSession() as session:
+        async with session.post(
+            YANDEX_IMAGES_URL, headers=headers, json=payload
+        ) as response:
+            if response.status == 200:
+                result = await response.json()
+                xml_data = base64.b64decode(result.get("rawData", ""))
+                from xml.etree import ElementTree as ET
+                root = ET.fromstring(xml_data)
+                ns = {"y": "http://www.yandex.ru/searchapi"}
+                images = []
+                for doc in root.findall(".//y:doc", ns)[:limit]:
+                    image_props = doc.find("y:image/y:properties", ns)
+                    if image_props is not None:
+                        images.append({
+                            "url": image_props.find("y:image-url", ns).text if image_props.find("y:image-url", ns) is not None else "",
+                            "thumbnail": image_props.find("y:thumbnail-url", ns).text if image_props.find("y:thumbnail-url", ns) is not None else "",
+                            "description": doc.find("y:title", ns).text if doc.find("y:title", ns) is not None else query,
+                        })
+                return {"results": images}
+            body = await response.text()
+            warning(f"Yandex Images Error [{response.status}] body={body}")
+            response.raise_for_status()
+    raise RuntimeError("Yandex Images request failed")
 
 
 # ── Tavily helpers ─────────────────────────────────────────────────────────────
@@ -94,7 +163,7 @@ async def _tavily_search(**kwargs) -> dict[str, Any]:
 
 # ── Search tools (only one backend registered) ────────────────────────────────
 
-if len(GOOGLE_KEYS):
+if YANDEX_API_KEY and YANDEX_FOLDER_ID:
 
     @mcp.tool()
     async def search_web(
@@ -103,12 +172,12 @@ if len(GOOGLE_KEYS):
         time_range: Literal["month", "year"] | None = None,
     ) -> dict:
         """
-        Search the web via Google (SerpAPI)
+        Search the web via Yandex Search API
 
         Args:
             query: Search keywords
             max_results: Maximum number of search results, default 3
-            time_range: Time range filter, "month", "year", or None
+            time_range: Time range filter (not supported by Yandex, kept for API compatibility)
 
         Returns:
             dict: with fields:
@@ -116,29 +185,23 @@ if len(GOOGLE_KEYS):
                 - total_results: number of results returned
                 - results: list of dicts with title, url, displayed_link, content
         """
-        debug(f"search_web via SerpAPI query={query!r}")
-        params: dict[str, Any] = {"engine": "google", "q": query, "num": max_results}
-        if time_range == "month":
-            params["tbs"] = "qdr:m"
-        elif time_range == "year":
-            params["tbs"] = "qdr:y"
-
-        result = await _serpapi_request(params)
+        debug(f"search_web via Yandex query={query!r}")
+        result = await _yandex_search_request(query, limit=max_results)
         results = [
             {
                 "title": item.get("title", ""),
-                "url": item["link"],
-                "displayed_link": item.get("displayed_link", ""),
+                "url": item.get("url", ""),
+                "displayed_link": item.get("domain", ""),
                 "content": item.get("snippet", ""),
             }
-            for item in result.get("organic_results", [])
+            for item in result.get("results", [])
         ]
         return {"query": query, "total_results": len(results), "results": results}
 
     @mcp.tool()
     async def search_images(query: str) -> dict:
         """
-        Search for web images via Google (SerpAPI)
+        Search for web images via Yandex Search API
 
         Returns:
             dict: with fields:
@@ -146,16 +209,15 @@ if len(GOOGLE_KEYS):
                 - total_results: number of results returned
                 - images: list of dicts with url, thumbnail, description
         """
-        debug(f"search_images via SerpAPI query={query!r}")
-        params: dict[str, Any] = {"engine": "google_images", "q": query, "num": 4}
-        result = await _serpapi_request(params)
+        debug(f"search_images via Yandex query={query!r}")
+        result = await _yandex_images_request(query, limit=4)
         images = [
             {
-                "url": item["original"],
-                "thumbnail": item.get("thumbnail", ""),
+                "url": item.get("image", {}).get("url", ""),
+                "thumbnail": item.get("preview", {}).get("url", ""),
                 "description": item.get("title", query),
             }
-            for item in result.get("images_results", [])[:4]
+            for item in result.get("results", [])
         ]
         return {"query": query, "total_results": len(images), "images": images}
 
