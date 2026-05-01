@@ -1,138 +1,104 @@
-# Project and User Background
+# AGENTS.md
 
-> Do not use plan mode unless user explicitly mentioned
+> This file is a structural map for AI agents. Keep it updated when project structure changes significantly.
 
-## Purpose
+## Project Overview
 
-This repository contains an agentic PowerPoint generation system with two closely related codepaths:
+PPTAgent/DeepPresenter is an agentic AI framework for automated PowerPoint generation from documents, prompts, or research. The project ships both legacy template-based generation (PPTAgent) and modern agent-based generation (DeepPresenter) in a single package.
 
-- `deeppresenter/`: the current runtime, CLI, multi-agent loop, MCP tool wiring, and HTML-to-PPTX pipeline.
-- `pptagent/`: the earlier core generation and evaluation library, still shipped in the package and still used for the MCP server entrypoint `pptagent-mcp`.
+## Tech Stack
 
-When making changes, treat `deeppresenter` as the primary product surface unless the task is explicitly about legacy `pptagent` generation internals or the MCP server.
+- **Programming language:** Python 3.11+
+- **Package manager:** uv
+- **CLI framework:** Typer
+- **Web framework:** FastAPI, Gradio
+- **Agent architecture:** Custom async agent loop with MCP-style tool calling
+- **Browser automation:** Playwright
+- **Containerization:** Docker
+- **Testing:** pytest with async support
 
-## Ground Truth
+## Project Structure
 
-- Python package metadata and console entrypoints live in `pyproject.toml`.
-- The main CLI command is `pptagent`, which points to `deeppresenter.cli:main`.
-- The MCP server command is `pptagent-mcp`, which points to `pptagent.mcp_server:main`.
-- Default runtime workspaces are created under `~/.cache/deeppresenter` unless `DEEPPRESENTER_WORKSPACE_BASE` is set.
-- Configuration templates live at `deeppresenter/config.yaml.example` and `deeppresenter/mcp.json.example`.
+```
+PPTAgent/
+├── deeppresenter/          # Active product surface (CLI, agents, tools)
+│   ├── agents/             # Agent classes (Agent base, Research, Design, PPTAgent)
+│   ├── cli/                # Typer CLI commands (onboard, generate, serve, config)
+│   ├── docker/             # Dockerfiles for sandbox and host containers
+│   ├── html2pptx/          # Node.js HTML→PPTX conversion pipeline
+│   ├── roles/              # Agent role definitions (YAML prompts)
+│   ├── test/               # Integration tests
+│   ├── tools/              # MCP-style tool servers (search, research, reflect)
+│   ├── utils/              # Config, logging, constants, web conversion
+│   ├── main.py             # AgentLoop orchestration entrypoint
+│   └── serve.sh            # Local inference service script
+├── pptagent/               # Legacy generation library (keep changes scoped)
+│   ├── document/           # Document parsing and processing
+│   ├── presentation/       # Slide generation and layout induction
+│   ├── prompts/            # Generation prompts
+│   ├── templates/          # PPTX templates and layout definitions
+│   ├── test/               # Unit tests
+│   ├── mcp_server.py       # MCP server entrypoint (pptagent-mcp command)
+│   └── utils.py            # Legacy utilities
+├── .ai-factory/            # AI Factory configuration and artifacts
+│   ├── config.yaml         # Language, workflow, git settings
+│   ├── DESCRIPTION.md      # Project specification
+│   ├── rules/              # Project-specific conventions
+│   └── ...                 # Plans, research, roadmap, etc.
+├── .github/                # GitHub workflows (CI, Docker publish, PyPI)
+├── .qwen/                  # Qwen Code configuration
+│   ├── settings.json       # MCP server configuration
+│   └── skills/             # Installed AI skills
+├── pyproject.toml          # Package metadata, deps, pytest config
+├── docker-compose.yml      # Docker Compose for server deployment
+├── webui.py                # Gradio web UI entrypoint
+└── AGENTS.md               # This file
+```
 
-Do not assume the root `README.md` is fully current. It still references paths like `webui.py` that are not present in this checkout. Prefer the code and `pyproject.toml` over prose docs when they conflict.
+## Key Entry Points
 
-## Core Philosophy
+| File | Purpose |
+|------|---------|
+| `deeppresenter/cli/commands.py` | Typer CLI commands (onboard, generate, serve, config, clean) |
+| `deeppresenter/main.py` | AgentLoop orchestration — Research → Generation → Export |
+| `pptagent/mcp_server.py` | MCP server entrypoint (`pptagent-mcp` command) |
+| `webui.py` | Gradio web UI for interactive generation |
+| `deeppresenter/config.yaml.example` | Runtime config template (LLM credentials, offline mode) |
+| `deeppresenter/mcp.json.example` | MCP tool server definitions template |
+| `pyproject.toml` | Package metadata, dependencies, pytest markers, ruff config |
+| `docker-compose.yml` | Docker Compose for server deployment (port 7861) |
 
-### 1. Good Taste First
+## Documentation
 
-> "Sometimes you can look at a problem differently, restate it, and the special case disappears."
+| Document | Path | Description |
+|----------|------|-------------|
+| README | README.md | Project landing page |
+| Getting Started | docs/getting-started.md | Installation, setup, first steps |
+| Configuration | docs/configuration.md | LLM credentials, optional services |
+| CLI Reference | docs/cli.md | Command reference for pptagent |
+| Deployment | docs/deployment.md | Docker Compose server deployment |
+| Architecture | docs/architecture.md | Project structure and patterns |
+| Contributing | docs/contributing.md | Development workflow and conventions |
 
-- Prefer restructuring the code so edge cases become ordinary cases.
-- Good taste is mostly accumulated engineering judgment.
-- Removing special-case branches is better than piling on conditionals.
+## AI Context Files
 
-### 2. Pragmatism Over Theory
+| File | Purpose |
+|------|---------|
+| AGENTS.md | This file — structural map for AI agents |
+| .ai-factory/DESCRIPTION.md | Project specification with tech stack and architecture notes |
+| .ai-factory/ARCHITECTURE.md | Architecture guidelines (generated by /skills aif-architecture) |
+| .ai-factory/rules/base.md | Codebase conventions (naming, structure, error handling) |
+| CLAUDE.md | Claude-specific project context and guidelines |
 
-> "I am a pragmatic bastard."
+## Agent Rules
 
-- Solve the real problem in this repository, not a hypothetical one.
-- Reject theoretically elegant but operationally heavy designs when simpler approaches work.
-- Code serves reality, not paper architecture.
-
-### 3. Simplicity As A Constraint
-
-> "If you need more than 3 levels of indentation, you're screwed and should fix your program."
-
-- Keep functions short and focused.
-- Prefer direct, obvious naming and structure.
-- Treat unnecessary complexity as a defect.
-
-## Code Style Rules
-
-1. Avoid excessive exception handling. Do not hide normal control flow behind defensive wrappers unless there is a concrete failure mode to handle.
-2. Add type hints to all functions and methods.
-3. Write technical documentation and code comments in English.
-4. Prefer modern tooling and current best practices:
-   - use `uv`, `rg`, and current Python features where appropriate
-   - follow current library APIs such as Pydantic `model_dump()` instead of legacy patterns
-5. Prefer fewer dependencies and less code.
-6. Keep `pyproject.toml` focused on the main `deeppresenter` product surface. Dependencies for isolated subdirectories should live in local `requirements.txt` files when that separation is real and maintainable.
-
-## Communication Rules
-
-- Think in English, reply to the user in Chinese.
-- Be direct and concise. If code is bad, explain why in technical terms.
-- Keep criticism focused on the implementation, design, or assumptions, never the person.
-- Do not dilute technical judgment just to sound polite.
-
-## High-Level Architecture
-
-### `deeppresenter/`
-
-- `cli/`: Typer CLI for `onboard`, `generate`, `serve`, `config`, and `clean`.
-- `main.py`: orchestration entrypoint. `AgentLoop.run()` executes `Research` first, then either `PPTAgent` or `Design`, and finally exports artifacts.
-- `agents/`: agent wrappers around the shared `Agent` base class.
-  - `research.py`: builds manuscript / research output from prompt and attachments.
-  - `pptagent.py`: runs PPT-oriented generation flow from markdown.
-  - `design.py`: generates slide HTML, then relies on browser conversion.
-- `tools/`: MCP-style tool servers for search, research, reflection, file conversion, and task management.
-- `utils/`: config loading, constants, logging, MinerU integration, web conversion, MCP client support.
-- `html2pptx/`: Node-based conversion helper used by the HTML slide pipeline.
-- `test/`: integration-style tests for sandbox tools, browser/PDF conversion, image processing, and related utilities.
-
-### `pptagent/`
-
-- Core presentation generation, layout induction, document parsing, evaluation, and template-driven PPT production.
-- `mcp_server.py` exposes the template-based slide creation workflow through FastMCP.
-- `test/` contains both unit tests and tests marked `llm` / `parse`.
-
-## Working Rules For Agents
-
-- Inspect the actual entrypoint before editing. The same concept may exist in both `deeppresenter/` and `pptagent/`.
-- Keep changes scoped. Do not refactor both stacks unless the task clearly spans both.
-- If touching CLI behavior, inspect `deeppresenter/cli/commands.py`, `deeppresenter/cli/common.py`, and any config-loading path together.
-- If touching orchestration, inspect `deeppresenter/main.py` and the relevant agent class under `deeppresenter/agents/`.
-- If touching MCP behavior, confirm whether the change belongs in `deeppresenter/tools/*.py` or `pptagent/mcp_server.py`.
-- If touching export/conversion, check both Python and Node sides:
-  - `deeppresenter/utils/webview.py`
-  - `deeppresenter/html2pptx/`
-- Prefer preserving existing config names and environment variables; these are wired into onboarding and example configs.
-
-## Known Sharp Edges
-
-- The repository contains stale documentation from older layouts. Verify files exist before referencing or editing them.
-- `deeppresenter` and `pptagent` both define generation-related concepts; changing one does not automatically update the other.
-- Browser and Docker dependencies are part of the normal runtime, not optional dev extras for some codepaths.
-- Some tests are integration-heavy and may fail if Playwright, Docker images, or model credentials are absent.
-
-## Developer Commands
-
-- Install dev environment: `uv sync`
-- Run pre-commit: `uv run pre-commit install`
-- Lint/format: `uv run ruff check --fix && uv run ruff format`
-- Run tests: `uv run pytest` (tests live in `pptagent/test/`)
-- Build package: `uv build`
-
-## Test Markers
-
-- `@pytest.mark.llm`: requires OPENAI_API_KEY
-- `@pytest.mark.parse`: requires minerU API
-- `@pytest.mark.asyncio`: async test
-
-## Key Entrypoints
-
-- CLI: `pptagent` → `deeppresenter.cli:main`
-- MCP: `pptagent-mcp` → `pptagent.mcp_server:main`
-- AgentLoop: `deeppresenter.main.py`
-
-## Runtime Dependencies
-
-- Playwright browsers (install via `playwright install --with-deps`)
-- Docker (for sandbox image `deeppresenter-sandbox`)
-- Node 18+ (for HTML→PPTX conversion)
-
-## Verified Configuration
-
-- `pyproject.toml`: package metadata, deps, pytest markers, ruff config
-- `deeppresenter/config.yaml.example`: runtime config schema
-- `pre-commit-config.yaml`: ruff, pyupgrade, validate-pyproject
+- Always decompose shell commands into atomic operations — never chain independent commands with `&&`
+  - **Incorrect:** `git checkout main && git pull origin main`
+  - **Correct:** First `git checkout main`, then `git pull origin main`
+- Treat `deeppresenter/` as the primary product surface unless task is explicitly about legacy `pptagent/`
+- Verify files exist before referencing — README may contain stale paths
+- Use `uv` for Python package management, not pip
+- Run lint/format before commits: `uv run ruff check --fix && uv run ruff format`
+- Tests require API keys for some markers: skip with `-m "not llm and not parse"`
+- Docker sandbox image is a runtime dependency, not optional for some codepaths
+- Windows not supported — use WSL if on Windows

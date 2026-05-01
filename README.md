@@ -1,4 +1,3 @@
-
 <div align="right">
   <details>
     <summary >🌐 Language</summary>
@@ -30,9 +29,13 @@
   </details>
 </div>
 
+# PPTAgent / DeepPresenter
+
 <div align="center">
   <img src="resource/pptagent-logo.jpg" width="240px" alt="https://github.com/icip-cas/PPTAgent">
 </div>
+
+> An agentic AI framework for automated PowerPoint generation from documents, prompts, or research.
 
 <table>
   <tr>
@@ -47,65 +50,16 @@
   </tr>
 </table>
 
-We **strongly recommend** deploying our fine-tuned model for the best experience with our agent project. According to our experiments, it **significantly outperforms existing open-source models**.
+## 🌟 Features
 
-| Format | HuggingFace | ModelScope |
-|--------|-------------|------------|
-| GGUF (Quantized) | [Forceless/DeepPresenter-9B-GGUF](https://huggingface.co/Forceless/DeepPresenter-9B-GGUF) | [forceless/DeepPresenter-9B-GGUF](https://modelscope.cn/models/forceless/DeepPresenter-9B-GGUF) |
-| Full Weights | [Forceless/DeepPresenter-9B](https://huggingface.co/Forceless/DeepPresenter-9B) | [forceless/DeepPresenter-9B](https://modelscope.cn/models/forceless/DeepPresenter-9B) |
+- **Deep Research Integration** — Multi-agent research loop with web search, paper search, and document parsing
+- **Free-Form Visual Design** — Generate beautiful HTML slides with autonomous asset creation
+- **Template-Based Generation** — Edit-driven slide creation from reference templates (legacy PPTAgent)
+- **Text-to-Image** — Autonomous image generation for slide visuals
+- **Docker Sandbox** — Secure agent execution with 20+ MCP tools
+- **Multiple Export Formats** — PPTX and PDF output via browser conversion
 
-<div align="center">
-  <img src="resource/wechat.jpg" width="140px">
-</div>
-
-## 📅 News
-
-- **[2026/04]** 🎉 [DeepPresenter](https://arxiv.org/abs/2602.22839) accepted to **ACL 2026**!
-- **[2026/03]** 🤗 We released fine-tuned models and taskset on [Hugging Face](https://huggingface.co/collections/ICIP/deeppresenter).
-- **[2026/01]** 🆕 Freeform & template generation now support PPTX export and offline mode. Context management added to prevent context overflow.
-- **[2025/12]** 🔥 Released **DeepPresenter** codebase with major upgrades — Deep Research Integration, Free-Form Visual Design, Autonomous Asset Creation, Text-to-Image Generation, and an Agent Environment with sandbox & 20+ tools.
-- **[2025/09]** 🛠️ MCP server support added — see [MCP Server](PPTAgent/DOC.md#mcp-server-) for configuration details.
-- **[2025/08]** 🎉 [PPTAgent](https://arxiv.org/abs/2501.03936) accepted to **EMNLP 2025**!
-- **[2025/05]** ⭐ Reached **1,000 stars** on GitHub!
-- **[2025/01]** 🔓 Open-sourced the PPTAgent codebase.
-
-## Usage 📖
-
-> [!IMPORTANT]
-> Windows is not supported. If you are on Windows, please use WSL.
->
-> We strongly recommend starting with the CLI and minimum task to confirm dependencies and environment is configured correctly.
-
-### Configuration
-
-If you use the CLI, `pptagent onboard` can help create and update these configurations interactively. If you use Docker Compose or build from source, you should prepare them manually:
-
-```bash
-cp deeppresenter/config.yaml.example deeppresenter/config.yaml
-cp deeppresenter/mcp.json.example deeppresenter/mcp.json
-```
-
-#### Optional Services That Improve Quality
-
-The following services can noticeably improve generation quality, especially for research depth, PDF parsing, and visual asset creation:
-
-- **Tavily**: improves web search quality. Apply for an API key at [tavily.com](https://www.tavily.com/), then set `TAVILY_API_KEY` in [`deeppresenter/mcp.json`](deeppresenter/mcp.json).
-- **MinerU**: improves PDF parsing quality. You can either apply for an API key at [mineru.net](https://mineru.net/apiManage/docs) and set `MINERU_API_KEY` in [`deeppresenter/mcp.json`](deeppresenter/mcp.json), or deploy MinerU locally and set `MINERU_API_URL` instead.
-- **Text-to-image model**: improves image generation quality. Configure `t2i_model` in [`deeppresenter/config.yaml`](deeppresenter/config.yaml).
-
-
-If you want a fully offline setup, deploy MinerU locally and set `offline_mode: true` in `deeppresenter/config.yaml` to avoid loading network-dependent tools such as web search.
-
-More configurable variables can be found in [constants.py](deeppresenter/utils/constants.py).
-
-### 1. Personal Use / OpenClaw Integration: CLI
-
-> [!NOTE]
-> On macOS, the CLI may automatically install several local dependencies, including Homebrew, Node.js, Docker, poppler, Playwright, and llama.cpp.
->
-> On Linux, you should prepare the environment by yourself.
-
-Use this mode if you want the fastest local setup or want to plug DeepPresenter into OpenClaw through the CLI.
+## 🚀 Quick Start
 
 ```bash
 # Install uv
@@ -121,144 +75,82 @@ uvx pptagent generate "Single Page with Title: Hello World" -o hello.pptx
 uvx pptagent generate "Q4 Report" \
   -f data.xlsx \
   -f charts.pdf \
-  -p "10-12" \
   -o report.pptx
 ```
 
-| Command             | Description                                       |
-| ------------------- | ------------------------------------------------- |
-| `pptagent onboard`  | Interactive configuration wizard                  |
-| `pptagent generate` | Generate presentations                            |
-| `pptagent config`   | View current configuration                        |
-| `pptagent reset`    | Reset configuration                               |
-| `pptagent serve`    | Start the local inference service used by the CLI |
+> [!IMPORTANT]
+> Windows is not supported. If you are on Windows, please use WSL.
 
-### 2. Minimal Setup / Development: Build From Source
+## 📖 Documentation
 
-Use this mode if you want the smallest abstraction layer and full control over dependencies during development.
+| Guide | Description |
+|-------|-------------|
+| [Getting Started](docs/getting-started.md) | Installation, setup, first steps |
+| [Configuration](docs/configuration.md) | LLM credentials, optional services, offline mode |
+| [CLI Reference](docs/cli.md) | Command reference for `pptagent` |
+| [Deployment](docs/deployment.md) | Docker Compose server deployment |
+| [Architecture](docs/architecture.md) | Project structure and agent architecture |
+| [Contributing](docs/contributing.md) | Development workflow and conventions |
 
-```bash
-uv pip install -e .
-playwright install-deps
-playwright install chromium
-npm install --prefix deeppresenter/html2pptx
-modelscope download forceless/fasttext-language-id
+## 📅 News
 
-docker pull forceless/deeppresenter-sandbox
-docker pull forceless/deeppresenter-host
-docker tag forceless/deeppresenter-sandbox deeppresenter-sandbox
+- **[2026/04]** 🎉 [DeepPresenter](https://arxiv.org/abs/2602.22839) accepted to **ACL 2026**!
+- **[2026/03]** 🤗 We released fine-tuned models and taskset on [Hugging Face](https://huggingface.co/collections/ICIP/deeppresenter).
+- **[2025/12]** 🔥 Released **DeepPresenter** codebase with major upgrades.
+- **[2025/09]** 🛠️ MCP server support added.
+- **[2025/08]** 🎉 [PPTAgent](https://arxiv.org/abs/2501.03936) accepted to **EMNLP 2025**!
 
-# or build from dockerfile
-docker build -t deeppresenter-sandbox -f deeppresenter/docker/SandBox.Dockerfile .
-```
+## 🤖 Fine-Tuned Model
 
-Start the app:
+We **strongly recommend** deploying our fine-tuned model for the best experience. According to experiments, it **significantly outperforms existing open-source models**.
 
-```bash
-python webui.py
-```
+| Format | HuggingFace | ModelScope |
+|--------|-------------|------------|
+| GGUF (Quantized) | [Forceless/DeepPresenter-9B-GGUF](https://huggingface.co/Forceless/DeepPresenter-9B-GGUF) | [forceless/DeepPresenter-9B-GGUF](https://modelscope.cn/models/forceless/DeepPresenter-9B-GGUF) |
+| Full Weights | [Forceless/DeepPresenter-9B](https://huggingface.co/Forceless/DeepPresenter-9B) | [forceless/DeepPresenter-9B](https://modelscope.cn/models/forceless/DeepPresenter-9B) |
 
-### 3. Server Deployment: Docker Compose
+## 💬 Community
 
-Use this mode for a stable server environment with explicit dependencies.
-
-```bash
-# Pull the public images to avoid build from source
-docker pull forceless/deeppresenter-sandbox
-docker tag forceless/deeppresenter-sandbox deeppresenter-sandbox
-
-# Or build from source
-docker build -t deeppresenter-sandbox -f deeppresenter/docker/SandBox.Dockerfile .
-
-# Start the host service
-docker compose up -d
-```
-
-The service exposes the web UI on `http://localhost:7861`.
-
-## Case Study 💡
-
-- #### Prompt: Please present the given document to me.
-
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-
-  <img src="resource/v2/manuscript/0001.jpg" alt="图片1" width="200"/>
-
-  <img src="resource/v2/manuscript/0002.jpg" alt="图片2" width="200"/>
-
-  <img src="resource/v2/manuscript/0003.jpg" alt="图片3" width="200"/>
-
-  <img src="resource/v2/manuscript/0004.jpg" alt="图片4" width="200"/>
-
-  <img src="resource/v2/manuscript/0005.jpg" alt="图片5" width="200"/>
-
-  <img src="resource/v2/manuscript/0006.jpg" alt="图片6" width="200"/>
-
-  <img src="resource/v2/manuscript/0007.jpg" alt="图片7" width="200"/>
-
-  <img src="resource/v2/manuscript/0008.jpg" alt="图片8" width="200"/>
-
-  <img src="resource/v2/manuscript/0009.jpg" alt="图片9" width="200"/>
-
-  <img src="resource/v2/manuscript/0010.jpg" alt="图片10" width="200"/>
-
+<div align="center">
+  <img src="resource/wechat.jpg" width="140px">
 </div>
 
-- #### Prompt: 请介绍小米 SU7 的外观和价格
+## Citation 🙏
 
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
+If you find this project helpful, please use the following to cite it:
 
-  <img src="resource/v2/presentation1/0001.jpg" alt="图片1" width="200"/>
+```bibtex
+@inproceedings{zheng-etal-2025-pptagent,
+    title = "{PPTA}gent: Generating and Evaluating Presentations Beyond Text-to-Slides",
+    author = "Zheng, Hao  and
+      Guan, Xinyan  and
+      Kong, Hao  and
+      Zhang, Wenkai  and
+      Zheng, Jia  and
+      Zhou, Weixiang  and
+      Lin, Hongyu  and
+      Lu, Yaojie  and
+      Han, Xianpei  and
+      Sun, Le",
+    booktitle = "Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing",
+    year = "2025",
+    address = "Suzhou, China",
+    publisher = "Association for Computational Linguistics",
+    url = "https://aclanthology.org/2025.emnlp-main.728/",
+    doi = "10.18653/v1/2025.emnlp-main.728",
+    pages = "14413--14429"
+}
 
-  <img src="resource/v2/presentation1/0002.jpg" alt="图片2" width="200"/>
-
-  <img src="resource/v2/presentation1/0003.jpg" alt="图片3" width="200"/>
-
-  <img src="resource/v2/presentation1/0004.jpg" alt="图片4" width="200"/>
-
-  <img src="resource/v2/presentation1/0005.jpg" alt="图片5" width="200"/>
-
-  <img src="resource/v2/presentation1/0006.jpg" alt="图片6" width="200"/>
-
-</div>
-
-- #### Prompt: 请制作一份高中课堂展示课件，主题为“解码立法过程：理解其对国际关系的影响”
-
-<div style="display: flex; flex-wrap: wrap; gap: 10px;">
-
-  <img src="resource/v2/presentation2/0001.jpg" alt="图片1" width="200"/>
-
-  <img src="resource/v2/presentation2/0002.jpg" alt="图片2" width="200"/>
-
-  <img src="resource/v2/presentation2/0003.jpg" alt="图片3" width="200"/>
-
-  <img src="resource/v2/presentation2/0004.jpg" alt="图片4" width="200"/>
-
-  <img src="resource/v2/presentation2/0005.jpg" alt="图片5" width="200"/>
-
-  <img src="resource/v2/presentation2/0006.jpg" alt="图片6" width="200"/>
-
-  <img src="resource/v2/presentation2/0007.jpg" alt="图片7" width="200"/>
-
-  <img src="resource/v2/presentation2/0008.jpg" alt="图片8" width="200"/>
-
-  <img src="resource/v2/presentation2/0009.jpg" alt="图片9" width="200"/>
-
-  <img src="resource/v2/presentation2/0010.jpg" alt="图片10" width="200"/>
-
-  <img src="resource/v2/presentation2/0011.jpg" alt="图片11" width="200"/>
-
-  <img src="resource/v2/presentation2/0012.jpg" alt="图片12" width="200"/>
-
-  <img src="resource/v2/presentation2/0013.jpg" alt="图片13" width="200"/>
-
-  <img src="resource/v2/presentation2/0014.jpg" alt="图片14" width="200"/>
-
-  <img src="resource/v2/presentation2/0015.jpg" alt="图片15" width="200"/>
-
-</div>
-
----
+@misc{zheng2026deeppresenterenvironmentgroundedreflectionagentic,
+      title={DeepPresenter: Environment-Grounded Reflection for Agentic Presentation Generation},
+      author={Hao Zheng and Guozhao Mo and Xinru Yan and Qianhao Yuan and Wenkai Zhang and Xuanang Chen and Yaojie Lu and Hongyu Lin and Xianpei Han and Le Sun},
+      year={2026},
+      eprint={2602.22839},
+      archivePrefix={arXiv},
+      primaryClass={cs.AI},
+      url={https://arxiv.org/abs/2602.22839},
+}
+```
 
 ## Contributors 🌟
 
@@ -407,46 +299,3 @@ The service exposes the web UI on `http://localhost:7861`.
 </table>
 
 [![Star History Chart](https://api.star-history.com/svg?repos=icip-cas/PPTAgent&type=Date)](https://star-history.com/#icip-cas/PPTAgent&Date)
-
-## Citation 🙏
-
-If you find this project helpful, please use the following to cite it:
-```bibtex
-@inproceedings{zheng-etal-2025-pptagent,
-    title = "{PPTA}gent: Generating and Evaluating Presentations Beyond Text-to-Slides",
-    author = "Zheng, Hao  and
-      Guan, Xinyan  and
-      Kong, Hao  and
-      Zhang, Wenkai  and
-      Zheng, Jia  and
-      Zhou, Weixiang  and
-      Lin, Hongyu  and
-      Lu, Yaojie  and
-      Han, Xianpei  and
-      Sun, Le",
-    editor = "Christodoulopoulos, Christos  and
-      Chakraborty, Tanmoy  and
-      Rose, Carolyn  and
-      Peng, Violet",
-    booktitle = "Proceedings of the 2025 Conference on Empirical Methods in Natural Language Processing",
-    month = nov,
-    year = "2025",
-    address = "Suzhou, China",
-    publisher = "Association for Computational Linguistics",
-    url = "https://aclanthology.org/2025.emnlp-main.728/",
-    doi = "10.18653/v1/2025.emnlp-main.728",
-    pages = "14413--14429",
-    ISBN = "979-8-89176-332-6",
-    abstract = "Automatically generating presentations from documents is a challenging task that requires accommodating content quality, visual appeal, and structural coherence. Existing methods primarily focus on improving and evaluating the content quality in isolation, overlooking visual appeal and structural coherence, which limits their practical applicability. To address these limitations, we propose PPTAgent, which comprehensively improves presentation generation through a two-stage, edit-based approach inspired by human workflows. PPTAgent first analyzes reference presentations to extract slide-level functional types and content schemas, then drafts an outline and iteratively generates editing actions based on selected reference slides to create new slides. To comprehensively evaluate the quality of generated presentations, we further introduce PPTEval, an evaluation framework that assesses presentations across three dimensions: Content, Design, and Coherence. Results demonstrate that PPTAgent significantly outperforms existing automatic presentation generation methods across all three dimensions."
-}
-
-@misc{zheng2026deeppresenterenvironmentgroundedreflectionagentic,
-      title={DeepPresenter: Environment-Grounded Reflection for Agentic Presentation Generation},
-      author={Hao Zheng and Guozhao Mo and Xinru Yan and Qianhao Yuan and Wenkai Zhang and Xuanang Chen and Yaojie Lu and Hongyu Lin and Xianpei Han and Le Sun},
-      year={2026},
-      eprint={2602.22839},
-      archivePrefix={arXiv},
-      primaryClass={cs.AI},
-      url={https://arxiv.org/abs/2602.22839},
-}
-```
