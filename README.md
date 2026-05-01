@@ -89,7 +89,8 @@ cp deeppresenter/mcp.json.example deeppresenter/mcp.json
 
 The following services can noticeably improve generation quality, especially for research depth, PDF parsing, and visual asset creation:
 
-- **Tavily**: improves web search quality. Apply for an API key at [tavily.com](https://www.tavily.com/), then set `TAVILY_API_KEY` in [`deeppresenter/mcp.json`](deeppresenter/mcp.json).
+- **Yandex AI Studio Search**: primary web search backend. Set `YANDEX_FOLDER_ID` and `YANDEX_AUTH` in [`deeppresenter/mcp.json`](deeppresenter/mcp.json).
+- **Tavily**: fallback web search backend (also used for image search when Yandex is configured). Apply for an API key at [tavily.com](https://www.tavily.com/), then set `TAVILY_API_KEY` in [`deeppresenter/mcp.json`](deeppresenter/mcp.json).
 - **MinerU**: improves PDF parsing quality. You can either apply for an API key at [mineru.net](https://mineru.net/apiManage/docs) and set `MINERU_API_KEY` in [`deeppresenter/mcp.json`](deeppresenter/mcp.json), or deploy MinerU locally and set `MINERU_API_URL` instead.
 - **Text-to-image model**: improves image generation quality. Configure `t2i_model` in [`deeppresenter/config.yaml`](deeppresenter/config.yaml).
 
