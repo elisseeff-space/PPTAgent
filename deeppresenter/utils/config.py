@@ -281,6 +281,10 @@ class LLM(BaseModel):
                         timeout=MCP_CALL_TIMEOUT // 5,
                         **endpoint.sampling_parameters,
                     )
+                    if isinstance(response, str):
+                        raise ValueError(
+                            f"Unexpected string response from {endpoint.model}: {response[:500]}"
+                        )
                     assert len(response.data) >= 1, (
                         f"Expected at least an image response, got {response}"
                     )
