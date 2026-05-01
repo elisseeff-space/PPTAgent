@@ -78,7 +78,7 @@ Do not assume the root `README.md` is fully current. It still references paths l
 - `tools/`: MCP-style tool servers for search, research, reflection, file conversion, and task management.
 - `utils/`: config loading, constants, logging, MinerU integration, web conversion, MCP client support.
 - `html2pptx/`: Node-based conversion helper used by the HTML slide pipeline.
-- `test/`: integration-style tests for sandbox tools, browser/PDF conversion, image processing, and related utilities.
+- `docker/`: Docker configuration for sandbox environment.
 
 ### `pptagent/`
 
