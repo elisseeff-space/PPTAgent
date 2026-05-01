@@ -1,6 +1,7 @@
 import asyncio
 import os
 import re
+import xml.etree.ElementTree as ET
 from io import BytesIO
 from pathlib import Path
 from typing import Any, Literal
@@ -26,9 +27,34 @@ mcp = FastMCP(name="Search", lifespan=playwright_lifespan)
 
 FAKE_UA = UserAgent()
 
-# Google (SerpAPI)
-GOOGLE_KEYS = [i.strip() for i in os.getenv("SERPAPI_KEY", "").split(",") if i.strip()]
-SERPAPI_URL = "https://serpapi.com/search"
+# ── Yandex AI Studio Search ──────────────────────────────────────────────────
+# API contract (from yandex_ai_studio_sdk example):
+#   - Auth: auth (API key string) + folder_id (Yandex cloud folder)
+#   - SDK: yandex_ai_studio_sdk.AIStudio
+#   - Web search: sdk.search_api.web(locale, ...) → search.run(query, format="xml")
+#   - Response: raw XML bytes — parse for title, url, summary
+#   - Image search: NOT supported by this API — fallback to Tavily or empty
+# ──────────────────────────────────────────────────────────────────────────────
+
+YANDEX_FOLDER_ID = os.getenv("YANDEX_FOLDER_ID", "").strip()
+YANDEX_AUTH = os.getenv("YANDEX_AUTH", "").strip()
+
+_has_yandex = bool(YANDEX_FOLDER_ID and YANDEX_AUTH)
+_yandex_sdk = None
+
+if _has_yandex:
+    try:
+        from yandex_ai_studio_sdk import AIStudio
+
+        _yandex_sdk = AIStudio(folder_id=YANDEX_FOLDER_ID, auth=YANDEX_AUTH)
+        debug("Yandex AI Studio Search SDK initialized")
+    except Exception as e:
+        warning(f"Failed to import yandex_ai_studio_sdk: {e}")
+        _has_yandex = False
+else:
+    debug(
+        "Yandex AI Studio Search not configured (missing YANDEX_FOLDER_ID or YANDEX_AUTH)"
+    )
 
 # Tavily
 TAVILY_KEYS = [
@@ -38,23 +64,74 @@ TAVILY_KEYS = [
 ]
 TAVILY_API_URL = "https://api.tavily.com/search"
 
-debug(f"{len(GOOGLE_KEYS)} SerpAPI keys loaded")
+debug(f"{_has_yandex=!r}")
 debug(f"{len(TAVILY_KEYS)} TAVILY keys loaded")
 
 
-# ── Google helpers ─────────────────────────────────────────────────────────────
+# ── Yandex helpers ───────────────────────────────────────────────────────────
 
 
-async def _serpapi_request(params: dict[str, Any]) -> dict[str, Any]:
-    params = {**params, "api_key": GOOGLE_KEYS[0]}
-    async with aiohttp.ClientSession() as session:
-        async with session.get(SERPAPI_URL, params=params) as response:
-            if response.status == 200:
-                return await response.json()
-            body = await response.text()
-            warning(f"SERPAPI Error [{response.status}] body={body}")
-            response.raise_for_status()
-    raise RuntimeError("SerpAPI request failed")
+def _parse_yandex_xml(raw: bytes) -> list[dict[str, str]]:
+    """Parse Yandex SearchXML response into list of {title, url, displayed_link, content}."""
+    debug(f"Parsing Yandex XML response ({len(raw)} bytes)")
+    results: list[dict[str, str]] = []
+    try:
+        root = ET.fromstring(raw)
+    except ET.ParseError as e:
+        warning(f"Yandex XML parse error: {e}")
+        return results
+
+    # Yandex SearchXML: <Response><results><document>
+    #   <title>...</title>
+    #   <url>...</url>
+    #   <summary>...</summary> or <passages><passage>...</passage></passages>
+    for doc in root.iter("document"):
+        title_el = doc.find("title")
+        url_el = doc.find("url")
+        summary_el = doc.find("summary")
+
+        # Also check for passages (grouped results)
+        passages = doc.find("passages")
+        passage_text = ""
+        if passages is not None:
+            passage_texts = [
+                p.text or "" for p in passages.findall("passage") if p.text
+            ]
+            passage_text = " ".join(passage_texts)
+
+        content = passage_text or (summary_el.text if summary_el is not None else "")
+
+        results.append(
+            {
+                "title": title_el.text if title_el is not None else "",
+                "url": url_el.text if url_el is not None else "",
+                "displayed_link": url_el.text if url_el is not None else "",
+                "content": content,
+            }
+        )
+
+    debug(f"Parsed {len(results)} results from Yandex XML")
+    return results
+
+
+async def _yandex_search(query: str, max_results: int = 3) -> list[dict[str, str]]:
+    """Execute web search via Yandex AI Studio SDK (runs in thread to avoid blocking)."""
+    if _yandex_sdk is None:
+        warning("Yandex SDK not initialized — cannot search")
+        return []
+
+    debug(f"_yandex_search query={query!r} max_results={max_results}")
+
+    def _sync_search() -> bytes:
+        search = _yandex_sdk.search_api.web("RU")
+        search = search.configure(
+            groups_on_page=max_results,
+            user_agent=FAKE_UA.random,
+        )
+        return search.run(query, format="xml")
+
+    raw = await asyncio.to_thread(_sync_search)
+    return _parse_yandex_xml(raw)
 
 
 # ── Tavily helpers ─────────────────────────────────────────────────────────────
@@ -94,7 +171,7 @@ async def _tavily_search(**kwargs) -> dict[str, Any]:
 
 # ── Search tools (only one backend registered) ────────────────────────────────
 
-if len(GOOGLE_KEYS):
+if _has_yandex:
 
     @mcp.tool()
     async def search_web(
@@ -103,12 +180,12 @@ if len(GOOGLE_KEYS):
         time_range: Literal["month", "year"] | None = None,
     ) -> dict:
         """
-        Search the web via Google (SerpAPI)
+        Search the web via Yandex AI Studio Search
 
         Args:
             query: Search keywords
             max_results: Maximum number of search results, default 3
-            time_range: Time range filter, "month", "year", or None
+            time_range: Time range filter (not supported by Yandex — ignored with debug log)
 
         Returns:
             dict: with fields:
@@ -116,48 +193,43 @@ if len(GOOGLE_KEYS):
                 - total_results: number of results returned
                 - results: list of dicts with title, url, displayed_link, content
         """
-        debug(f"search_web via SerpAPI query={query!r}")
-        params: dict[str, Any] = {"engine": "google", "q": query, "num": max_results}
-        if time_range == "month":
-            params["tbs"] = "qdr:m"
-        elif time_range == "year":
-            params["tbs"] = "qdr:y"
+        debug(
+            f"search_web via Yandex query={query!r} max_results={max_results} time_range={time_range!r}"
+        )
+        if time_range is not None:
+            debug("Yandex Search does not support time_range filtering — ignoring")
 
-        result = await _serpapi_request(params)
-        results = [
-            {
-                "title": item.get("title", ""),
-                "url": item["link"],
-                "displayed_link": item.get("displayed_link", ""),
-                "content": item.get("snippet", ""),
-            }
-            for item in result.get("organic_results", [])
-        ]
+        results = await _yandex_search(query, max_results)
         return {"query": query, "total_results": len(results), "results": results}
 
     @mcp.tool()
     async def search_images(query: str) -> dict:
         """
-        Search for web images via Google (SerpAPI)
+        Search for web images.
+
+        Yandex AI Studio Search does not support image search.
+        Falls back to Tavily if available, otherwise returns empty results.
 
         Returns:
             dict: with fields:
                 - query: the search query
                 - total_results: number of results returned
-                - images: list of dicts with url, thumbnail, description
+                - images: list of dicts with url, description
         """
-        debug(f"search_images via SerpAPI query={query!r}")
-        params: dict[str, Any] = {"engine": "google_images", "q": query, "num": 4}
-        result = await _serpapi_request(params)
-        images = [
-            {
-                "url": item["original"],
-                "thumbnail": item.get("thumbnail", ""),
-                "description": item.get("title", query),
-            }
-            for item in result.get("images_results", [])[:4]
-        ]
-        return {"query": query, "total_results": len(images), "images": images}
+        debug(f"search_images via Yandex (fallback to Tavily) query={query!r}")
+        if len(TAVILY_KEYS):
+            debug("Falling back to Tavily for image search")
+            result = await _tavily_search(include_image_descriptions=True)
+            images = [
+                {"url": img["url"], "description": img["description"]}
+                for img in result.get("images", [])
+            ]
+            return {"query": query, "total_results": len(images), "images": images}
+
+        warning(
+            "Image search unavailable: Yandex does not support it and Tavily is not configured"
+        )
+        return {"query": query, "total_results": 0, "images": []}
 
 elif len(TAVILY_KEYS):
 

@@ -239,11 +239,13 @@ def onboard():
             else:
                 raise ValueError("search server not found in mcp.json")
 
-        if Confirm.ask("Configure SerpAPI key for Google web search?", default=False):
-            serpapi_key = Prompt.ask("SerpAPI key", password=True)
+        if Confirm.ask("Configure Yandex AI Studio Search credentials?", default=False):
+            yandex_folder = Prompt.ask("Yandex folder ID", password=True)
+            yandex_auth = Prompt.ask("Yandex auth key", password=True)
             for server in mcp_data:
                 if server.get("name") == "search":
-                    server["env"]["SERPAPI_KEY"] = serpapi_key
+                    server["env"]["YANDEX_FOLDER_ID"] = yandex_folder
+                    server["env"]["YANDEX_AUTH"] = yandex_auth
                     break
             else:
                 raise ValueError("search server not found in mcp.json")
